@@ -37,8 +37,7 @@ module.exports = app;
 */
 require('dotenv').config();
 const express = require('express');
-const swaggerUi = require("swagger-ui-express");
-const { specs } = require("./swagger");
+const { swaggerUi, specs } = require("./swagger");
 
 const app = express();
 app.use(express.json());
@@ -46,25 +45,10 @@ app.use(express.json());
 app.use("/api/users", require("./routes/users"));
 app.use("/api/login", require("./routes/login"));
 
-/**
- * ⭐ 1) expose swagger spec
- */
-app.get("/api/swagger.json", (req, res) => {
-  res.json(specs);
-});
+// ✅ Swagger UI
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-/**
- * ⭐ 2) Swagger UI ที่ /api-docs (ตามโจทย์)
- */
-app.use(
-  "/api-docs",
-  swaggerUi.serve,
-  swaggerUi.setup(null, {
-    swaggerOptions: {
-      url: "/api/swagger.json", // ชี้ spec ชัด ๆ
-    },
-  })
-);
-
+// ❌ ห้าม app.listen
 module.exports = app;
+
 

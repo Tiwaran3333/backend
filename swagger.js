@@ -1,4 +1,6 @@
 const swaggerJsdoc = require("swagger-jsdoc");
+const swaggerUi = require("swagger-ui-express");
+const path = require("path");
 
 const options = {
   definition: {
@@ -7,11 +9,15 @@ const options = {
       title: "API Documentation",
       version: "1.0.0",
     },
-    servers: [{ url: "/" }],
+    servers: [
+      {
+        url: "/", // ⭐ สำคัญมากสำหรับ Vercel
+      },
+    ],
   },
-  apis: ["./routes/*.js"],
+  apis: [path.join(__dirname, "/routes/*.js")],
 };
 
 const specs = swaggerJsdoc(options);
 
-module.exports = { specs };
+module.exports = { swaggerUi, specs };
