@@ -9,7 +9,13 @@ const options = {
       version: "1.0.0",
     },
 
-    // ⭐⭐⭐ สำคัญที่สุด ⭐⭐⭐
+    // ⭐ สำคัญมาก สำหรับ server วิทยาลัย / reverse proxy
+    servers: [
+      {
+        url: "/",   // 👈 ห้ามใส่โดเมน
+      },
+    ],
+
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -20,7 +26,6 @@ const options = {
       },
     },
 
-    // (ไม่บังคับ แต่แนะนำ)
     security: [
       {
         bearerAuth: [],
@@ -28,7 +33,7 @@ const options = {
     ],
   },
 
-  apis: ["./routes/*.js"], // path ที่เก็บ @openapi
+  apis: ["./routes/*.js"],
 };
 
 const specs = swaggerJsdoc(options);
