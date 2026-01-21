@@ -1,5 +1,4 @@
 const swaggerJsdoc = require("swagger-jsdoc");
-const swaggerUi = require("swagger-ui-express");
 
 const options = {
   definition: {
@@ -8,37 +7,11 @@ const options = {
       title: "API Documentation",
       version: "1.0.0",
     },
-
-    // ⭐ สำคัญมาก สำหรับ server วิทยาลัย / reverse proxy
-    servers: [
-      {
-        url: "/",   // 👈 ห้ามใส่โดเมน
-      },
-    ],
-
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: "http",
-          scheme: "bearer",
-          bearerFormat: "JWT",
-        },
-      },
-    },
-
-    security: [
-      {
-        bearerAuth: [],
-      },
-    ],
+    servers: [{ url: "/" }],
   },
-
   apis: ["./routes/*.js"],
 };
 
 const specs = swaggerJsdoc(options);
 
-module.exports = {
-  swaggerUi,
-  specs,
-};
+module.exports = { specs };
