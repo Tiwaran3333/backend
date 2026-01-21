@@ -47,24 +47,24 @@ app.use("/api/users", require("./routes/users"));
 app.use("/api/login", require("./routes/login"));
 
 /**
- * ✅ expose swagger spec แบบ JSON
- * อันนี้ “ต้องขึ้น” ถ้า backend ทำงาน
+ * ⭐ 1) expose swagger spec
  */
 app.get("/api/swagger.json", (req, res) => {
   res.json(specs);
 });
 
 /**
- * ✅ Swagger UI แบบ custom (รอดหลัง proxy)
+ * ⭐ 2) Swagger UI ที่ /api-docs (ตามโจทย์)
  */
 app.use(
-  "/api/swagger",
+  "/api-docs",
   swaggerUi.serve,
   swaggerUi.setup(null, {
     swaggerOptions: {
-      url: "/api/swagger.json",
+      url: "/api/swagger.json", // ชี้ spec ชัด ๆ
     },
   })
 );
 
 module.exports = app;
+
