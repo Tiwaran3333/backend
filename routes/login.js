@@ -1,9 +1,8 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const db = require('../config/db');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken'); // ✅ ต้องมี
-
+const db = require("../config/db");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 
 /**
  * @openapi
@@ -24,62 +23,59 @@ const jwt = require('jsonwebtoken'); // ✅ ต้องมี
  *             properties:
  *               username:
  *                 type: string
- *                 example: admin
+ *                 example: N
  *               password:
  *                 type: string
- *                 example: 1234
+ *                 example: 3150
  *     responses:
  *       200:
  *         description: Login success
  *       401:
  *         description: Invalid credentials
  */
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   const { username, password } = req.body;
 
-  try {
-    if (!username || !password) {
-      return res.status(400).json({ error: 'Username and password required' });
-    }
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ error: "Username and password required" });
+  }
 
+  try {
     const [rows] = await db.query(
-      'SELECT id, username, password FROM tbl_users WHERE username = ?',
+      "SELECT id, username, password, status FROM tbl_users WHERE username = ?",
       [username]
     );
 
     if (rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const user = rows[0];
     const match = await bcrypt.compare(password, user.password);
 
     if (!match) {
-      return res.status(401).json({ error: 'Invalid username or password' });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    // 🔐 สร้าง JWT
     const token = jwt.sign(
       {
-        userId: user.id,
-        username: user.username
+        id: user.id,
+        username: user.username,
+        status: user.status,
       },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: "1h" }
     );
 
-    // ✅ ต้องส่ง token กลับ
     res.json({
-      message: 'Login success',
-      token: token
+      message: "Login success",
+      token,
     });
-
   } catch (err) {
-    console.error('LOGIN ERROR:', err.message);
-    res.status(500).json({
-      error: 'Login failed',
-      detail: err.message
-    });
+    console.error(err);
+    res.status(500).json({ error: "Login failed" });
   }
 });
 

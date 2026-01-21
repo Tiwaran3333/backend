@@ -1,15 +1,21 @@
 const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
-const bcrypt = require('bcrypt'); //เพิ่ม bcrypt
-const verifyToken = require('../middleware/auth'); //Verify Token
+const bcrypt = require("bcrypt");
+const verifyToken = require("../middleware/auth");
+
+/**
+ * @openapi
+ * tags:
+ *   name: Users
+ *   description: User management
+ */
 
 /**
  * @openapi
  * /api/users:
  *   get:
- *     tags:
- *       - Users
+ *     tags: [Users]
  *     summary: Get all users
  *     security:
  *       - bearerAuth: []
@@ -17,29 +23,30 @@ const verifyToken = require('../middleware/auth'); //Verify Token
  *       200:
  *         description: OK
  */
-
-router.get('/', verifyToken, async (req, res) => {
+router.get("/", verifyToken, async (req, res) => {
   try {
-    const [rows] = await db.query('SELECT id, firstname, fullname, lastname FROM tbl_users');
+    const [rows] = await db.query(
+      "SELECT id, firstname, fullname, lastname, username, status FROM tbl_users"
+    );
     res.json(rows);
   } catch (err) {
-    res.status(500).json({ error: 'Query failed' });
+    console.error(err);
+    res.status(500).json({ error: "Query failed" });
   }
 });
 
-// GET user by id
 /**
  * @openapi
  * /api/users/{id}:
  *   get:
- *     tags:
- *       - Users
+ *     tags: [Users]
  *     summary: Get user by id
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
  *         required: true
- *         description: User ID
  *         schema:
  *           type: integer
  *           example: 1
@@ -49,26 +56,30 @@ router.get('/', verifyToken, async (req, res) => {
  *       404:
  *         description: User not found
  */
-
-
-router.get('/:id', async (req, res) => {
+router.get("/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows] = await db.query('SELECT id, firstname, fullname, lastname FROM tbl_users WHERE id = ?', [id]);
-    if (rows.length === 0) return res.status(404).json({ message: 'User not found' });
+    const [rows] = await db.query(
+      "SELECT id, firstname, fullname, lastname, username, status FROM tbl_users WHERE id = ?",
+      [id]
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
     res.json(rows[0]);
   } catch (err) {
-    res.status(500).json({ error: 'Query failed' });
+    res.status(500).json({ error: "Query failed" });
   }
 });
 
-//POST: เพิ่มผู้ใช้ใหม่ พร้อม hash password
 /**
  * @openapi
  * /api/users:
  *   post:
  *     tags: [Users]
  *     summary: Create new user
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -94,59 +105,45 @@ router.get('/:id', async (req, res) => {
  *                 type: string
  *     responses:
  *       200:
- *         description: OK
+ *         description: User created
  */
-
-router.post('/', async (req, res) => {
-  console.log('content-type:', req.headers['content-type']);
-  console.log('body:', req.body);
-
-  const {
-    firstname,
-    fullname,
-    lastname,
-    username,
-    password,
-    status
-  } = req.body || {}; // ⭐ สำคัญที่สุด
+router.post("/", verifyToken, async (req, res) => {
+  const { firstname, fullname, lastname, username, password, status } = req.body;
 
   if (!firstname || !username || !password) {
-    return res.status(400).json({
-      message: 'Missing required fields',
-      body: req.body
-    });
+    return res.status(400).json({ message: "Missing required fields" });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
     const [result] = await db.query(
-      'INSERT INTO tbl_users (firstname, fullname, lastname, username, password, status) VALUES (?, ?, ?, ?, ?, ?)',
-      [firstname, fullname, lastname, username, hashedPassword, status]
+      `INSERT INTO tbl_users 
+       (firstname, fullname, lastname, username, password, status)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [firstname, fullname, lastname, username, hashedPassword, status || "user"]
     );
 
     res.json({ id: result.insertId });
   } catch (err) {
-    res.status(500).json({ error: 'Insert failed' });
+    console.error(err);
+    res.status(500).json({ error: "Insert failed" });
   }
 });
-
 
 /**
  * @openapi
  * /api/users/{id}:
  *   put:
- *     tags:
- *       - Users
- *     summary: Update user by id
+ *     tags: [Users]
+ *     summary: Update user
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
  *         required: true
- *         description: User ID
  *         schema:
  *           type: integer
- *           example: 1
  *     requestBody:
  *       required: true
  *       content:
@@ -156,87 +153,77 @@ router.post('/', async (req, res) => {
  *             properties:
  *               firstname:
  *                 type: string
- *                 example: John
  *               fullname:
  *                 type: string
- *                 example: John Doe
  *               lastname:
  *                 type: string
- *                 example: Doe
  *               password:
  *                 type: string
- *                 example: 1234
  *     responses:
  *       200:
- *         description: User updated successfully
- *       404:
- *         description: User not found
+ *         description: Updated successfully
  */
-router.put('/:id', async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   const { firstname, fullname, lastname, password } = req.body;
 
   try {
-    let query = 'UPDATE tbl_users SET firstname = ?, fullname = ?, lastname = ?';
+    let sql = "UPDATE tbl_users SET firstname=?, fullname=?, lastname=?";
     const params = [firstname, fullname, lastname];
 
-    // ถ้ามี password ใหม่ให้ hash แล้วอัปเดตด้วย
     if (password) {
-      const hashedPassword = await bcrypt.hash(password, 10);
-      query += ', password = ?';
-      params.push(hashedPassword);
+      const hashed = await bcrypt.hash(password, 10);
+      sql += ", password=?";
+      params.push(hashed);
     }
 
-    query += ' WHERE id = ?';
+    sql += " WHERE id=?";
     params.push(id);
 
-    const [result] = await db.query(query, params);
+    const [result] = await db.query(sql, params);
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    res.json({ message: 'User updated successfully' });
+    res.json({ message: "User updated successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Update failed' });
+    res.status(500).json({ error: "Update failed" });
   }
 });
 
-// DELETE user
 /**
  * @openapi
  * /api/users/{id}:
  *   delete:
- *     tags:
- *       - Users
- *     summary: Delete user by id
+ *     tags: [Users]
+ *     summary: Delete user
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - name: id
  *         in: path
  *         required: true
- *         description: User ID
  *         schema:
  *           type: integer
- *           example: 1
  *     responses:
  *       200:
- *         description: User deleted successfully
- *       404:
- *         description: User not found
+ *         description: Deleted successfully
  */
-
-router.delete('/:id', async (req, res) => {
+router.delete("/:id", verifyToken, async (req, res) => {
   const { id } = req.params;
   try {
-    const [result] = await db.query('DELETE FROM tbl_users WHERE id = ?', [id]);
-    if (result.affectedRows === 0) return res.status(404).json({ message: 'User not found' });
-    res.json({ message: 'User deleted successfully' });
+    const [result] = await db.query(
+      "DELETE FROM tbl_users WHERE id = ?",
+      [id]
+    );
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ message: "User deleted successfully" });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Delete failed' });
+    res.status(500).json({ error: "Delete failed" });
   }
 });
 
 module.exports = router;
- 

@@ -6,12 +6,27 @@ const options = {
   definition: {
     openapi: "3.0.0",
     info: {
-      title: "API Documentation",
+      title: "Backend API",
       version: "1.0.0",
     },
     servers: [
       {
-        url: "/", // ⭐ สำคัญมากสำหรับ Vercel
+        url: "http://localhost:3000",
+        description: "Local server",
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
+    },
+    security: [
+      {
+        bearerAuth: [],
       },
     ],
   },
